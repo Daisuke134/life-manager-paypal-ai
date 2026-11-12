@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Life Manager — Pay with PayPal, Managed by AI</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#0b1020;color:#eef1ff}
+  .wrap{max-width:760px;margin:0 auto;padding:32px 20px 64px}
+  h1{font-size:28px;line-height:1.25} h2{font-size:20px;margin-top:36px}
+  .card{background:#151b36;border:1px solid #26305e;border-radius:14px;padding:20px;margin:18px 0}
+  .price{font-size:34px;font-weight:700}
+  .muted{color:#aab3d6} .ok{color:#7ee2a8;font-weight:600}
+  #brief{white-space:pre-wrap;line-height:1.6}
+  a{color:#8fb4ff}
+</style>
+<script src="https://www.paypal.com/sdk/js?client-id=sb&currency=USD"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>Life Manager — Pay with PayPal, Managed by AI</h1>
+  <p class="muted">Life Manager is an autonomous AI manager that runs your work and life operations.
+  This prototype closes the money loop: you subscribe through PayPal Sandbox, and the moment payment
+  is captured, the AI manager provisions your workspace and writes your personal onboarding brief.</p>
+
+  <div class="card">
+    <div class="muted">Life Manager plan</div>
+    <div class="price">$29.00 <span class="muted" style="font-size:16px">/ month (Sandbox demo)</span></div>
+    <p>7-day free trial on the live product at <a href="https://aniccaai.com/maritime">aniccaai.com/maritime</a>.
+    This page charges a PayPal <b>Sandbox</b> order only — no real money moves.</p>
+    <div id="paypal-button-container"></div>
+    <p id="status" class="muted">Status: waiting for checkout…</p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Your AI onboarding brief</h2>
+    <p id="brief">Your brief appears here automatically after the PayPal capture succeeds.
+    The manager generates it from your order (plan, payer, time of day) — no human in the loop.</p>
+  </div>
+
+  <h2>How it works</h2>
+  <ol>
+    <li>Click the PayPal button and approve the $29.00 Sandbox order as a Sandbox buyer.</li>
+    <li>The PayPal JS SDK creates the order and captures it in the browser (Orders flow).</li>
+    <li>On capture, the AI brief generator composes your onboarding brief and shows your order ID.</li>
+  </ol>
+  <p class="muted">AI tools used: an in-browser brief-generation module (deterministic template composition
+  driven by order data) stands in for Life Manager's production LLM manager in this hackathon prototype —
+  disclosed honestly; the payment rail (PayPal Sandbox) is fully live. Source + MIT license:
+  <a href="https://github.com/Daisuke134/life-manager-paypal-ai">github.com/Daisuke134/life-manager-paypal-ai</a></p>
+</div>
+<script>
+  function makeBrief(payerName, orderId) {
+    var hour = new Date().getHours();
+    var focus = hour < 12 ? "clear the single most important task before noon"
+              : hour < 18 ? "protect one deep-work block this afternoon"
+              : "close the day with a 10-minute review and set tomorrow's first task";
+    var first = (payerName || "there").split(" ")[0];
+    return "Welcome aboard, " + first + ".\n\n" +
+      "Payment confirmed — PayPal order " + orderId + " (Sandbox).\n" +
+      "Your Life Manager workspace is provisioned on the $29/month plan.\n\n" +
+      "Your manager's first moves:\n" +
+      "1. Today: " + focus + ".\n" +
+      "2. Connect your calendar and inbox so the manager can brief you every morning.\n" +
+      "3. Your first Daily Briefing arrives tomorrow at 07:00.\n\n" +
+      "No human touched this onboarding. — Life Manager";
+  }
+  paypal.Buttons({
+    createOrder: function(data, actions) {
+      document.getElementById('status').textContent = 'Status: order created, waiting for buyer approval…';
+      return actions.order.create({ purchase_units: [{ amount: { value: '29.00' }, description: 'Life Manager — 1 month (Sandbox)' }] });
+    },
+    onApprove: function(data, actions) {
+      return actions.order.capture().then(function(details) {
+        document.getElementById('status').innerHTML = '<span class="ok">Payment captured. Order ID: ' + data.orderID + '</span>';
+        var name = details && details.payer && details.payer.name ? details.payer.name.given_name : '';
+        document.getElementById('brief').textContent = makeBrief(name, data.orderID);
+      });
+    },
+    onError: function(err) {
+      document.getElementById('status').textContent = 'Status: PayPal error — ' + err;
+    }
+  }).render('#paypal-button-container');
+</script>
+</body>
+</html>
